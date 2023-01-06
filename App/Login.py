@@ -45,6 +45,7 @@ class Login(QDialog):
             diccionario = respuesta['datos']
             alumno.data = namedtuple("Alumno", diccionario.keys())(*diccionario.values())
             QMessageBox.information(self, 'Exito', "Bienvenido '{0}'".format(alumno.data.NOMBRE_ALUMNO))
+            alumno.programa.obtener_data(alumno.data.ID_PROGRAMA)
             self.accept()
         else:
             QMessageBox.warning(self, 'Error', respuesta['mensaje'])

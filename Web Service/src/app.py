@@ -1,5 +1,6 @@
 import oracledb
 from flask import Flask, jsonify, request
+oracledb.defaults.fetch_lobs = False
 
 app = Flask(__name__)
 
@@ -45,7 +46,7 @@ def validar_credenciales() -> jsonify:
                                   'DNI_ALUMNO': row[5],
                                   'URL_FOTO_ALUMNO': row[6],
                                   'CORREO_ALUMNO': row[7],
-                                  'FOTO_ALUMNO': row[8],
+                                  'FOTO_ALUMNO': row[8].decode('utf-8'),
                                   'USUARIO': row[9],
                                   'PASSWORD_ALUMNO': row[10],
                                   'ASISTENCIA': row[11]}
@@ -53,7 +54,7 @@ def validar_credenciales() -> jsonify:
                 return jsonify({'datos': estudiante, 'mensaje': "Ok", 'exito': True})
             else:
                 return jsonify({'mensaje': "Datos incorrectos", 'exito': False})
-    except oracledb.exceptions as e:
+    except Exception as e:
         print(e)
         return jsonify({'mensaje': "Error en el procedimiento", 'exito': False})
 
@@ -72,7 +73,7 @@ def actualizar_alumno_imagen() -> jsonify:
             cursor.callproc('DOC_SDEL.ALUMNO_FOTO_ACTUALIZAR', list(request.json.values()))
             conexion.commit()
             return jsonify({'mensaje': "Ok", 'exito': True})
-    except oracledb.exceptions as e:
+    except Exception as e:
         print(e)
         return jsonify({'mensaje': "Error al actualizar imagen", 'exito': False})
 
@@ -91,7 +92,7 @@ def grabar_evento() -> jsonify:
             cursor.callproc('DOC_SDEL.BITACORA_EVENTOS_GRABAR', list(request.json.values()))
             conexion.commit()
             return jsonify({'mensaje': "Ok", 'exito': True})
-    except oracledb.exceptions as e:
+    except Exception as e:
         print(e)
         return jsonify({'mensaje': "Error al grabar evento", 'exito': False})
 
@@ -122,7 +123,7 @@ def listar_programa(ID_PROGRAMA: str) -> jsonify:
                 return jsonify({'datos': programa, 'mensaje': "Ok", 'exito': True})
             else:
                 return jsonify({'mensaje': "Datos incorrectos", 'exito': False})
-    except oracledb.exceptions as e:
+    except Exception as e:
         print(e)
         return jsonify({'mensaje': "Error en el procedimiento", 'exito': False})
     
