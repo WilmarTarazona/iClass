@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from Utils.Camara import Camara
 from Models.Alumno import alumno
 from Utils.Constantes_iClass import *
+from Utils.Solicitudes import solicitud
 
 class iClass(QMainWindow):
     def __init__(self) -> None:
@@ -57,26 +58,48 @@ class iClass(QMainWindow):
     
     def mostrar_fecha_hora(self) -> None:
         self.fecha_hora_label.setText(QDateTime.currentDateTime().toString('dd/MM/yyyy \n hh:mm:ss'))
+    
+    def grabar_evento(self, descripcion_evento: str, tiempo: float, prueba: str, aviso: str) -> bool:
+        json = {"ID_PROGRAMA": alumno.data.ID_PROGRAMA,
+                "NOMBRE_ESTUDIANTE": alumno.data.NOMBRE_ESTUDIANTE,
+                "APELLIDO_ESTUDIANTE": alumno.data.APELLIDO_ESTUDIANTE,
+                "DESCRIPCION_EVENTO": descripcion_evento,
+                "HORA_EVENTO": time.strftime('%d-%m-%Y %H:%M:%S', time.localtime(tiempo)),
+                "CAPTURA_PRUEBA": prueba,
+                "ID_EVENTO": None,
+                "AVISO_USUARIO": aviso,
+                "ID_INSTITUCION": alumno.programa.data.ID_INSTITUCION,
+                "ID_ALUMNO": alumno.data.ID_ALUMNO}
+        estado, _ = solicitud("POST", URL + '/evento', json)
+        if estado:
+            return True
+        else:
+            return False
 
     def iniciar_examen(self) -> None:
-        print(time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n"))
-        # AÑADIR VALIDACIÓN DE TIEMPOS
-
-        instrucciones = QMessageBox(self)
-        instrucciones.setText(TEXTO_INICIO_EXAMEN)
-        instrucciones.setInformativeText(TEXTO_INSTRUCCIONES_INICIO_EXAMEN)
-        instrucciones.setStandardButtons(QMessageBox.Ok)
-        instrucciones.setBaseSize(400, 150)
-        instrucciones_valor = instrucciones.exec()
-        if instrucciones_valor == QMessageBox.Ok:
-            if not self.validar_usuario():
-                # SE HA DETECTADO USUARIO NO RECONOCIDO LA INCIDENCIA SE MANDARÁ AL SUPERVISOR
-                # SE HA DETECTADO MÁS DE UNA PERSONA EN LA VISIÓN DE LA CÁMARA LA INCIDENCIA SE MANDARÁ AL SUPERVISOR
-                pass
-            self.examen_boton.setText(TEXTO_FINALIZAR_EXAMEN_BOTON)
+        if time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") > alumno.programa.data.FECHA_INICIO or time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") < alumno.programa.data.FECHA_FIN:
+            QMessageBox.warning(self, 'Error', 'No está dentro de la hora programada del examen')
+        else:
+            instrucciones = QMessageBox(self)
+            instrucciones.setText(TEXTO_INICIO_EXAMEN)
+            instrucciones.setInformativeText(TEXTO_INSTRUCCIONES_INICIO_EXAMEN)
+            instrucciones.setStandardButtons(QMessageBox.Ok)
+            instrucciones.setBaseSize(400, 150)
+            instrucciones_valor = instrucciones.exec()
+            if instrucciones_valor == QMessageBox.Ok:
+                estado_validacion = self.camara.compare_faces(alumno.data.FOTO_ALUMNO)
+                if estado_validacion == 0:
+                    QMessageBox.warning(self, 'Error', 'No se ha detectado personas en cámara')
+                elif estado_validacion == 1:
+                    QMessageBox.warning(self, 'Error', 'Usuario no reconocido, la incidencia se mandará al supervisor')
+                    self.grabar_evento("Usuario no reconocido en validación", time.time(), self.camara.get_frame(), "Usuario no reconocido, la incidencia se mandará al supervisor")
+                elif estado_validacion == 2:
+                    QMessageBox.warning(self, 'Error', 'Más de una persona en cámara, la incidencia se mandará al supervisor')
+                    self.grabar_evento("Varios usuarios en validación", time.time(), self.camara.get_frame(), "Usuario no reconocido, la incidencia se mandará al supervisor")
+                else:
+                    self.examen_boton.setText(TEXTO_FINALIZAR_EXAMEN_BOTON)
+                    self.examen_boton.clicked.disconnect()
+                    self.examen_boton.clicked.connect(self.finalizar_examen)
     
-    def validar_usuario(self) -> bool:
-        """
-        IMPLEMENTAR COMPARACIÓN ENTRE FOTO DE BD Y CAMARA
-        """
-        return True
+    def finalizar_examen(self) -> None:
+        self.close()
