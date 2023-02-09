@@ -1,4 +1,4 @@
-from Utils.Solicitudes import solicitud
+from Utils.Funciones import solicitud
 from collections import namedtuple
 from Utils.Constantes import URL
 
@@ -11,3 +11,5 @@ class Programa():
         if estado:
             diccionario = respuesta['datos']
             self.data = namedtuple("Programa", diccionario.keys())(*diccionario.values())
+
+programa = Programa()

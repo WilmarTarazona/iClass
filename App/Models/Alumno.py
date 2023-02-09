@@ -1,8 +1,6 @@
-from Models.Programa import Programa
-
 class Alumno():
     def __init__(self) -> None:
         self.data = None
-        self.programa = Programa()
+        self.programa = None
 
 alumno = Alumno()

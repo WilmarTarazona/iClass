@@ -5,8 +5,10 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from Utils.Camara import Camara
 from Models.Alumno import alumno
+from Utils.Tracker import Tracker
+from Models.Programa import programa
 from Utils.Constantes_iClass import *
-from Utils.Solicitudes import solicitud
+from Utils.Funciones import grabar_evento
 
 class iClass(QMainWindow):
     def __init__(self) -> None:
@@ -45,6 +47,9 @@ class iClass(QMainWindow):
         self.camara.start()
         self.camara.ImageUpdate.connect(self.ImageUpdateSlot)
 
+        # Tracker -> Softwares
+        self.tracker = Tracker()
+
         # Timer 1 segundo
         timer_1s = QTimer(self)
         timer_1s.timeout.connect(self.timer_1s)
@@ -58,26 +63,9 @@ class iClass(QMainWindow):
     
     def mostrar_fecha_hora(self) -> None:
         self.fecha_hora_label.setText(QDateTime.currentDateTime().toString('dd/MM/yyyy \n hh:mm:ss'))
-    
-    def grabar_evento(self, descripcion_evento: str, tiempo: float, prueba: str, aviso: str) -> bool:
-        json = {"ID_PROGRAMA": alumno.data.ID_PROGRAMA,
-                "NOMBRE_ESTUDIANTE": alumno.data.NOMBRE_ESTUDIANTE,
-                "APELLIDO_ESTUDIANTE": alumno.data.APELLIDO_ESTUDIANTE,
-                "DESCRIPCION_EVENTO": descripcion_evento,
-                "HORA_EVENTO": time.strftime('%d-%m-%Y %H:%M:%S', time.localtime(tiempo)),
-                "CAPTURA_PRUEBA": prueba,
-                "ID_EVENTO": None,
-                "AVISO_USUARIO": aviso,
-                "ID_INSTITUCION": alumno.programa.data.ID_INSTITUCION,
-                "ID_ALUMNO": alumno.data.ID_ALUMNO}
-        estado, _ = solicitud("POST", URL + '/evento', json)
-        if estado:
-            return True
-        else:
-            return False
 
     def iniciar_examen(self) -> None:
-        if time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") > alumno.programa.data.FECHA_INICIO or time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") < alumno.programa.data.FECHA_FIN:
+        if time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") > programa.data.FECHA_INICIO or time.strftime("%a, %d %b %Y %I:%M:%S %p %Z\n") < programa.data.FECHA_FIN:
             QMessageBox.warning(self, 'Error', 'No está dentro de la hora programada del examen')
         else:
             instrucciones = QMessageBox(self)
@@ -86,20 +74,25 @@ class iClass(QMainWindow):
             instrucciones.setStandardButtons(QMessageBox.Ok)
             instrucciones.setBaseSize(400, 150)
             instrucciones_valor = instrucciones.exec()
+            
             if instrucciones_valor == QMessageBox.Ok:
                 estado_validacion = self.camara.compare_faces(alumno.data.FOTO_ALUMNO)
-                if estado_validacion == 0:
-                    QMessageBox.warning(self, 'Error', 'No se ha detectado personas en cámara')
-                elif estado_validacion == 1:
-                    QMessageBox.warning(self, 'Error', 'Usuario no reconocido, la incidencia se mandará al supervisor')
-                    self.grabar_evento("Usuario no reconocido en validación", time.time(), self.camara.get_frame(), "Usuario no reconocido, la incidencia se mandará al supervisor")
-                elif estado_validacion == 2:
-                    QMessageBox.warning(self, 'Error', 'Más de una persona en cámara, la incidencia se mandará al supervisor')
-                    self.grabar_evento("Varios usuarios en validación", time.time(), self.camara.get_frame(), "Usuario no reconocido, la incidencia se mandará al supervisor")
-                else:
+                if estado_validacion == 0: # No detecta cara
+                    QMessageBox.warning(self, 'Error', ESTADO_VALIDACION_0)
+                elif estado_validacion == 1: # Cara desconocida
+                    QMessageBox.warning(self, 'Error', ESTADO_VALIDACION_1)
+                    grabar_evento("Validación fallida", time.time(), self.camara.get_frame(), ESTADO_VALIDACION_1)
+                elif estado_validacion == 2: # Varias caras
+                    QMessageBox.warning(self, 'Error', ESTADO_VALIDACION_2)
+                    grabar_evento("Varios usuarios en validación", time.time(), self.camara.get_frame(), ESTADO_VALIDACION_2)
+                else: # Validación correcta
                     self.examen_boton.setText(TEXTO_FINALIZAR_EXAMEN_BOTON)
                     self.examen_boton.clicked.disconnect()
                     self.examen_boton.clicked.connect(self.finalizar_examen)
+                    self.camara.start_validation()
+                    self.tracker.start()
     
     def finalizar_examen(self) -> None:
+        self.camara.stop()
+        self.tracker.stop()
         self.close()

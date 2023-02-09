@@ -1,5 +1,6 @@
 import oracledb
 from flask import Flask, jsonify, request
+
 oracledb.defaults.fetch_lobs = False
 
 app = Flask(__name__)
@@ -84,8 +85,8 @@ def grabar_evento() -> jsonify:
     """
     try:
         conexion = establecer_conexion()
-    except Exception:
-        return jsonify({'error': conexion, 'mensaje': "Error conectando a la base de datos", 'exito': False})
+    except Exception as e:
+        return jsonify({'error': e, 'mensaje': "Error conectando a la base de datos", 'exito': False})
 
     try:
         with conexion.cursor() as cursor:

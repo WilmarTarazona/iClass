@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import *
 from Models.Alumno import alumno
+from Models.Programa import programa
 from Utils.Constantes import URL
 from collections import namedtuple
 from Utils.Constantes_Login import *
-from Utils.Solicitudes import solicitud
+from Utils.Funciones import solicitud
 
 class Login(QDialog):
     def __init__(self) -> None:
@@ -45,7 +46,8 @@ class Login(QDialog):
             diccionario = respuesta['datos']
             alumno.data = namedtuple("Alumno", diccionario.keys())(*diccionario.values())
             QMessageBox.information(self, 'Exito', "Bienvenido '{0}'".format(alumno.data.NOMBRE_ALUMNO))
-            alumno.programa.obtener_data(alumno.data.ID_PROGRAMA)
+            programa.obtener_data(alumno.data.ID_PROGRAMA)
+            alumno.programa = programa
             self.accept()
         else:
             QMessageBox.warning(self, 'Error', respuesta['mensaje'])
