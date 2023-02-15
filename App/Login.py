@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import *
-from Models.Alumno import alumno
-from Models.Programa import programa
 from Utils.Constantes import URL
+from Models.Alumno import alumno
 from collections import namedtuple
+from Models.Programa import programa
 from Utils.Constantes_Login import *
 from Utils.Funciones import solicitud
 
